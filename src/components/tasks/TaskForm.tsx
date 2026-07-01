@@ -140,8 +140,8 @@ export default function TaskForm({ task, defaultDate, onDone }: Props) {
       </div>
 
       {/* Due date + time */}
-      <div className="flex gap-3">
-        <div className="flex-1">
+      <div className="space-y-4">
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">תאריך יעד</label>
           <input
             type="date"
@@ -151,7 +151,7 @@ export default function TaskForm({ task, defaultDate, onDone }: Props) {
             dir="ltr"
           />
         </div>
-        <div className="flex-1">
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">שעה (אופציונלי)</label>
           <input
             type="time"
