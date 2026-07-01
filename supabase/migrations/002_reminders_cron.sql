@@ -31,8 +31,9 @@ begin
     'Authorization', 'Bearer ' || service_key
   );
 
+  -- Event reminders
   for r in
-    select distinct e.id as event_id, e.title, u.id as to_user_id
+    select distinct e.id as event_id, null::uuid as task_id, e.title, u.id as to_user_id
     from public.events e
     join public.profiles u on (
       u.id = e.created_by
@@ -41,7 +42,7 @@ begin
     )
     where e.reminder_minutes is not null
       and e.reminder_minutes > 0
-      and date_trunc('minute', e.start_datetime - (e.reminder_minutes || ' minutes')::interval)
+      and date_trunc('minute', e.start_datetime - interval '1 minute' * e.reminder_minutes)
           = date_trunc('minute', now())
       and u.push_subscription is not null
   loop
@@ -50,6 +51,38 @@ begin
       'title', chr(1514) || chr(1494) || chr(1499) || chr(1493) || chr(1512) || chr(1514) || ': ' || r.title,
       'body', chr(1492) || chr(1488) || chr(1497) || chr(1512) || chr(1493) || chr(1506) || ' ' || chr(1502) || chr(1514) || chr(1495) || chr(1497) || chr(1500) || ' ' || chr(1489) || chr(1511) || chr(1512) || chr(1493) || chr(1489),
       'event_id', r.event_id
+    );
+    perform net.http_post(
+      supabase_url || '/functions/v1/send-push',
+      req_body,
+      '{}'::jsonb,
+      req_headers
+    );
+  end loop;
+
+  -- Task reminders (fire at due_date+due_time minus reminder_minutes; default time 09:00)
+  for r in
+    select distinct t.id as task_id, null::uuid as event_id, t.title, u.id as to_user_id
+    from public.tasks t
+    join public.profiles u on (
+      u.id = t.created_by
+      or u.id = t.assigned_to
+      or t.assigned_to is null
+    )
+    where t.reminder_minutes is not null
+      and t.reminder_minutes > 0
+      and t.due_date is not null
+      and t.is_done = false
+      and date_trunc('minute',
+            (t.due_date + coalesce(t.due_time, time '09:00')) - interval '1 minute' * t.reminder_minutes
+          ) = date_trunc('minute', now())
+      and u.push_subscription is not null
+  loop
+    req_body := json_build_object(
+      'to_user_id', r.to_user_id,
+      'title', chr(1514) || chr(1494) || chr(1499) || chr(1493) || chr(1512) || chr(1514) || ': ' || r.title,
+      'body', chr(1494) || chr(1499) || chr(1493) || chr(1512) || ' ' || chr(1500) || chr(1496) || chr(1497) || chr(1508) || chr(1493) || chr(1500) || ' ' || chr(1489) || chr(1502) || chr(1513) || chr(1497) || chr(1502) || chr(1492),
+      'task_id', r.task_id
     );
     perform net.http_post(
       supabase_url || '/functions/v1/send-push',

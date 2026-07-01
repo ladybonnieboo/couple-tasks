@@ -18,6 +18,8 @@ export interface Task {
   completed_at?: string
   recurrence_rule?: string
   recurrence_end_date?: string
+  due_time?: string
+  reminder_minutes?: number
   created_at: string
   assignee?: Profile | null
   comment_count?: number

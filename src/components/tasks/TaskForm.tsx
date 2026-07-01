@@ -51,6 +51,8 @@ export default function TaskForm({ task, defaultDate, onDone }: Props) {
   const [priority, setPriority] = useState<Priority>(task?.priority ?? 'medium')
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none')
   const [recurrenceEnd, setRecurrenceEnd] = useState(task?.recurrence_end_date ?? '')
+  const [dueTime, setDueTime] = useState(task?.due_time?.substring(0, 5) ?? '')
+  const [reminder, setReminder] = useState<number>(task?.reminder_minutes ?? 0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -65,9 +67,11 @@ export default function TaskForm({ task, defaultDate, onDone }: Props) {
         description: description || undefined,
         assigned_to: assignedTo === BOTH ? null : assignedTo,
         due_date: dueDate || undefined,
+        due_time: dueTime || undefined,
         priority,
         recurrence_rule: buildRRule(recurrence),
         recurrence_end_date: recurrenceEnd || undefined,
+        reminder_minutes: reminder || undefined,
       }
       if (task) {
         await updateTask(task.id, payload)
@@ -135,16 +139,28 @@ export default function TaskForm({ task, defaultDate, onDone }: Props) {
         </div>
       </div>
 
-      {/* Due date */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">תאריך יעד</label>
-        <input
-          type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 text-right"
-          dir="ltr"
-        />
+      {/* Due date + time */}
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">תאריך יעד</label>
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            dir="ltr"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">שעה (אופציונלי)</label>
+          <input
+            type="time"
+            value={dueTime}
+            onChange={(e) => setDueTime(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            dir="ltr"
+          />
+        </div>
       </div>
 
       {/* Priority */}
@@ -190,6 +206,29 @@ export default function TaskForm({ task, defaultDate, onDone }: Props) {
               dir="ltr"
             />
           </div>
+        )}
+      </div>
+
+      {/* Reminder */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">🔔 תזכורת</label>
+        <select
+          value={reminder}
+          onChange={(e) => setReminder(Number(e.target.value))}
+          disabled={!dueDate}
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white text-right disabled:opacity-50"
+        >
+          <option value={0}>ללא תזכורת</option>
+          <option value={15}>15 דקות לפני</option>
+          <option value={30}>30 דקות לפני</option>
+          <option value={60}>שעה לפני</option>
+          <option value={1440}>יום לפני</option>
+        </select>
+        {!dueDate && (
+          <p className="text-xs text-gray-400 mt-1">יש לבחור תאריך יעד כדי להגדיר תזכורת</p>
+        )}
+        {dueDate && !dueTime && reminder > 0 && reminder < 1440 && (
+          <p className="text-xs text-amber-500 mt-1">ללא שעה, התזכורת תישלח בבוקר יום היעד</p>
         )}
       </div>
 
